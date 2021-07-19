@@ -1,0 +1,8 @@
+[server]
+host_ip = "127.0.0.1"
+port = 8080
+
+[key]
+client_id = "None"
+client_secret = "None"
+
