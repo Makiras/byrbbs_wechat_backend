@@ -40,6 +40,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .service(api_index)
             .service(service::token::callback)
+            .service(service::token::refresh)
     })
     .bind(
         CONF.server
