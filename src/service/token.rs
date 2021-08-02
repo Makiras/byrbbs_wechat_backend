@@ -14,10 +14,7 @@ pub struct CallBackQuery {
     code: String,
 }
 
-#[get("/callback")]
-pub async fn callback(web::Query(info): web::Query<CallBackQuery>) -> HttpResponse {
-    let req_code = info.code;
-
+async fn get_access_token(code: String) -> (actix_web::http::StatusCode, actix_web::web::Bytes) {
     let client = Client::builder()
         .max_http_version(http::Version::HTTP_11)
         .timeout(Duration::from_millis(1000))
@@ -26,7 +23,7 @@ pub async fn callback(web::Query(info): web::Query<CallBackQuery>) -> HttpRespon
     let params_arr = [
         ("client_id", CONF.key.client_id.as_ref().unwrap()),
         ("client_secret", CONF.key.client_secret.as_ref().unwrap()),
-        ("code", &req_code),
+        ("code", &code),
         ("redirect_uri", &REDIRECT_URI.to_string()),
         ("grant_type", &GRANT_TYPE_AUTH.to_string()),
     ];
@@ -35,9 +32,30 @@ pub async fn callback(web::Query(info): web::Query<CallBackQuery>) -> HttpRespon
         .send_form(&params_arr)
         .await
         .unwrap();
-    let response_body = response.body().await.unwrap();
-    println!("{},{:?}", req_code, response_body);
-    HttpResponse::Ok().body(response_body)
+    match response.body().await {
+        Ok(body) => (response.status(), body),
+        Err(e) => {
+            println!("{:?}", e);
+            (
+                http::StatusCode::INTERNAL_SERVER_ERROR,
+                actix_web::web::Bytes::from(e.to_string()),
+            )
+        }
+    }
+}
+
+#[get("/callback")]
+pub async fn callback_get(web::Query(info): web::Query<CallBackQuery>) -> HttpResponse {
+    let req_code = info.code;
+    let (status, body) = get_access_token(req_code).await;
+    HttpResponse::with_body(status, actix_web::dev::Body::Bytes(body))
+}
+
+#[post("/callback")]
+pub async fn callback_post(web::Query(info): web::Query<CallBackQuery>) -> HttpResponse {
+    let req_code = info.code;
+    let (status, body) = get_access_token(req_code).await;
+    HttpResponse::with_body(status, actix_web::dev::Body::Bytes(body))
 }
 
 #[derive(Serialize, Deserialize, Debug)]

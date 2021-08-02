@@ -39,7 +39,8 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Compress::default())
             .wrap(middleware::Logger::default())
             .service(api_index)
-            .service(service::token::callback)
+            .service(service::token::callback_get)
+            .service(service::token::callback_post)
             .service(service::token::refresh)
     })
     .bind(
